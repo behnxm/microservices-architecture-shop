@@ -13,6 +13,7 @@
     <PackageReference Include="Aspire.Hosting.PostgreSQL" />
     <PackageReference Include="Aspire.Hosting.RabbitMQ" />
     <ProjectReference Include="..\Shop.Catalog.Api\Shop.Catalog.Api.csproj" />
+    <ProjectReference Include="..\Shop.Ordering.Api\Shop.Ordering.Api.csproj" />
     <ProjectReference Include="..\Shop.Gateway\Shop.Gateway.csproj" />
   </ItemGroup>
 

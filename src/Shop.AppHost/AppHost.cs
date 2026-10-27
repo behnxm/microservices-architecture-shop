@@ -27,10 +27,22 @@ var catalogApi = builder.AddProject<Shop_Catalog_Api>("catalog-api")
     .WithEnvironment("HealthChecks:Expose", "true")
     .WithHttpHealthCheck("/health");
 
+var orderingApi = builder.AddProject<Shop_Ordering_Api>("ordering-api")
+    .WithReference(orderingDb)
+    .WithReference(catalogApi)
+    .WaitFor(orderingDb)
+    .WaitFor(catalogApi)
+    .WithReplicas(2)
+    .WithEnvironment("Database:Migrate", "true")
+    .WithEnvironment("HealthChecks:Expose", "true")
+    .WithHttpHealthCheck("/health");
+
 // 3. Reverse Proxy Gateway (the single external entry point)
 builder.AddProject<Shop_Gateway>("gateway")
     .WithReference(catalogApi)
+    .WithReference(orderingApi)
     .WaitFor(catalogApi)
+    .WaitFor(orderingApi)
     .WithHttpEndpoint(port: 8080, name: "public-gateway")
     .WithHttpHealthCheck("/health");
 
