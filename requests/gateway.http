@@ -1,0 +1,18 @@
+### Variables
+@gatewayUrl = http://localhost:8080
+
+### 1. Gateway Health Check
+GET {{gatewayUrl}}/health HTTP/1.1
+Accept: application/json
+
+### 2. Gateway Root (Catalog of available public routes)
+GET {{gatewayUrl}}/ HTTP/1.1
+Accept: application/json
+
+### 3. Verify Internal Lookup Route is Blocked (Returns 404 from Gateway)
+GET {{gatewayUrl}}/internal/v1/products/lookup?ids=019488a0-0000-7000-8000-000000000001 HTTP/1.1
+Accept: application/json
+
+### 4. Verify Gateway Stamps Correlation Header (X-Trace-Id)
+GET {{gatewayUrl}}/api/v1/products HTTP/1.1
+Accept: application/json

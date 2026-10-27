@@ -1,0 +1,55 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build & Verify Solution
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Verify Code Style & Formatting
+        run: dotnet format --verify-no-changes
+
+      - name: Restore Dependencies
+        run: dotnet restore Shop.slnx
+
+      - name: Build Solution (Release)
+        run: dotnet build Shop.slnx -c Release --no-restore
+
+      - name: Run Unit, Integration & Architecture Tests
+        run: dotnet test Shop.slnx -c Release --no-build --filter "Category!=E2E"
+
+  docker-verify:
+    name: Validate Docker & Compose
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Validate Docker Compose Configuration
+        run: docker compose config --quiet
+
+      - name: Build Gateway Container
+        run: |
+          docker build \
+            --build-arg PROJECT=src/Shop.Gateway/Shop.Gateway.csproj \
+            --build-arg DLL_NAME=Shop.Gateway.dll \
+            -t shop-gateway:ci .

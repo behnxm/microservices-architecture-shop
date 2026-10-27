@@ -1,0 +1,203 @@
+services:
+  # =========================================================================
+  # Infrastructure Services
+  # =========================================================================
+
+  postgres:
+    image: postgres:17.4-alpine
+    container_name: shop-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_dev_password
+    volumes:
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  rabbitmq:
+    image: rabbitmq:4.0-management-alpine
+    container_name: shop-rabbitmq
+    ports:
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  mailpit:
+    image: axllent/mailpit:v1.22
+    container_name: shop-mailpit
+    ports:
+      - "8025:8025" # Mailpit Web UI
+    networks:
+      - backend
+
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:9.5
+    container_name: shop-aspire-dashboard
+    ports:
+      - "18888:18888" # Dashboard Web UI
+    environment:
+      DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: "true"
+    networks:
+      - backend
+
+  # =========================================================================
+  # Microservices Architecture
+  # =========================================================================
+
+  catalog-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: src/Shop.Catalog.Api/Shop.Catalog.Api.csproj
+        DLL_NAME: Shop.Catalog.Api.dll
+    command: ["Shop.Catalog.Api.dll"]
+    container_name: shop-catalog-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__catalogdb: Host=postgres;Database=catalogdb;Username=catalog_user;Password=catalog_dev_password
+      ConnectionStrings__rabbitmq: amqp://guest:guest@rabbitmq:5672
+      Database__Migrate: "true"
+      Database__Seed: "true"
+      HealthChecks__Expose: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:4317
+      OTEL_SERVICE_NAME: catalog-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "dotnet", "Shop.Catalog.Api.dll", "--healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend
+
+  ordering-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: src/Shop.Ordering.Api/Shop.Ordering.Api.csproj
+        DLL_NAME: Shop.Ordering.Api.dll
+    command: ["Shop.Ordering.Api.dll"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__orderingdb: Host=postgres;Database=orderingdb;Username=ordering_user;Password=ordering_dev_password
+      ConnectionStrings__rabbitmq: amqp://guest:guest@rabbitmq:5672
+      Services__Catalog__Url: http://catalog-api:8080
+      Database__Migrate: "true"
+      HealthChecks__Expose: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:4317
+      OTEL_SERVICE_NAME: ordering-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      catalog-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "dotnet", "Shop.Ordering.Api.dll", "--healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend
+
+  notifications-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: src/Shop.Notifications.Worker/Shop.Notifications.Worker.csproj
+        DLL_NAME: Shop.Notifications.Worker.dll
+    command: ["Shop.Notifications.Worker.dll"]
+    container_name: shop-notifications-worker
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__notificationsdb: Host=postgres;Database=notificationsdb;Username=notifications_user;Password=notifications_dev_password
+      ConnectionStrings__rabbitmq: amqp://guest:guest@rabbitmq:5672
+      Smtp__Host: mailpit
+      Smtp__Port: "1025"
+      Database__Migrate: "true"
+      HealthChecks__Expose: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:4317
+      OTEL_SERVICE_NAME: notifications-worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "dotnet", "Shop.Notifications.Worker.dll", "--healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend
+
+  # =========================================================================
+  # Reverse Proxy Gateway (Sole externally exposed ingress point)
+  # =========================================================================
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: src/Shop.Gateway/Shop.Gateway.csproj
+        DLL_NAME: Shop.Gateway.dll
+    command: ["Shop.Gateway.dll"]
+    container_name: shop-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ReverseProxy__Clusters__catalog-cluster__Destinations__dest1__Address: http://catalog-api:8080
+      ReverseProxy__Clusters__ordering-cluster__Destinations__dest1__Address: http://ordering-api:8080
+      HealthChecks__Expose: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:4317
+      OTEL_SERVICE_NAME: gateway
+    depends_on:
+      catalog-api:
+        condition: service_healthy
+      ordering-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "dotnet", "Shop.Gateway.dll", "--healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - edge
+      - backend
+
+networks:
+  edge:
+    name: shop-edge
+    driver: bridge
+  backend:
+    name: shop-backend
+    driver: bridge
