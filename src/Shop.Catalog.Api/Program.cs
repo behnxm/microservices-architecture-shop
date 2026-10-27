@@ -7,8 +7,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Scalar.AspNetCore;
+using Shop.BuildingBlocks.Messaging.Extensions;
+using Shop.Catalog.Api.Consumers;
 using Shop.Catalog.Api.Data;
 using Shop.Catalog.Api.Products;
+using Shop.Contracts;
 using Shop.ServiceDefaults;
 
 // 1. Standalone healthcheck CLI switch for container environments
@@ -35,12 +38,18 @@ builder.Services.AddDbContext<CatalogDbContext>(options =>
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<CatalogDbContext>("catalogdb", tags: ["ready"]);
 
-// 4. OpenAPI & Documentation
+// 4. Messaging infrastructure, outbox, inbox, and consumers
+builder.Services.AddMessagingInfrastructure(builder.Configuration);
+builder.Services.AddTransactionalOutbox<CatalogDbContext>();
+builder.Services.AddTransactionalInbox<CatalogDbContext>();
+builder.Services.AddConsumer<OrderPlacedIntegrationEvent, OrderPlacedHandler, CatalogDbContext>("catalog.order-placed");
+
+// 5. OpenAPI & Documentation
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// 5. Automatic migrations and seed on startup (configured for development/compose/apphost)
+// 6. Automatic migrations and seed on startup (configured for development/compose/apphost)
 if (app.Configuration.GetValue<bool>("Database:Migrate"))
 {
     using var scope = app.Services.CreateScope();
@@ -57,14 +66,14 @@ if (app.Configuration.GetValue<bool>("Database:Migrate"))
     }
 }
 
-// 6. OpenAPI & Scalar UI (Development only)
+// 7. OpenAPI & Scalar UI (Development only)
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
 
-// 7. Map Endpoints
+// 8. Map Endpoints
 app.MapProductEndpoints();
 app.MapDefaultEndpoints();
 

@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Shop.BuildingBlocks.Messaging.Outbox;
+using Shop.Contracts;
 using Shop.Ordering.Api.Clients;
 using Shop.Ordering.Api.Data;
 using Shop.Ordering.Api.Idempotency;
@@ -55,6 +57,7 @@ public static class OrderEndpoints
         HttpContext httpContext,
         OrderingDbContext db,
         ICatalogClient catalogClient,
+        IOutbox outbox,
         CreateOrderRequest request,
         CancellationToken cancellationToken)
     {
@@ -165,13 +168,22 @@ public static class OrderEndpoints
         var responsePayload = new OrderCreatedResponse(order.Id, order.Status.ToString());
         var responseJson = JsonSerializer.Serialize(responsePayload, CamelCaseJson);
 
-        // 7. Atomic transaction: insert order + idempotency record
+        // 7. Atomic transaction: insert order + idempotency record + outbox message
         var idempotencyRecord = IdempotencyRecord.Create(idempotencyKey, requestHash, order.Id, StatusCodes.Status202Accepted, responseJson);
+
+        var orderPlacedEvent = new OrderPlacedIntegrationEvent(
+            MessageId: Guid.CreateVersion7(),
+            OccurredOn: order.CreatedAt,
+            OrderId: order.Id,
+            CustomerId: order.CustomerId,
+            CustomerEmail: order.CustomerEmail,
+            Items: order.Lines.Select(l => new OrderLineItemContract(l.ProductId, l.Quantity)).ToList());
 
         try
         {
             db.Orders.Add(order);
             db.IdempotencyRecords.Add(idempotencyRecord);
+            outbox.Enqueue(orderPlacedEvent);
             await db.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateException)

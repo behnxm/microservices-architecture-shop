@@ -17,6 +17,7 @@
     <PackageReference Include="Testcontainers.PostgreSql" />
     <ProjectReference Include="..\..\src\Shop.Catalog.Api\Shop.Catalog.Api.csproj" />
     <ProjectReference Include="..\..\src\Shop.Contracts\Shop.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Shop.BuildingBlocks.Messaging\Shop.BuildingBlocks.Messaging.csproj" />
   </ItemGroup>
 
 </Project>

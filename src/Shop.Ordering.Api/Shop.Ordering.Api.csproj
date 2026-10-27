@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Shop.ServiceDefaults\Shop.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\Shop.BuildingBlocks.Messaging\Shop.BuildingBlocks.Messaging.csproj" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>

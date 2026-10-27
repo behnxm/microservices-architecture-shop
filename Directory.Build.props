@@ -7,8 +7,9 @@
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <!-- CA1848: allow direct ILogger extensions (e.g. LogInformation) without requiring source-generated LoggerMessage delegates -->
-    <NoWarn>$(NoWarn);CA1848</NoWarn>
+    <!-- CA1848, CA1873: allow direct ILogger extensions (e.g. LogInformation) without requiring source-generated LoggerMessage delegates or argument guards -->
+    <!-- CA1711: allow domain-standard naming conventions such as IIntegrationEventHandler -->
+    <NoWarn>$(NoWarn);CA1848;CA1873;CA1711</NoWarn>
     <NuGetAudit>true</NuGetAudit>
     <NuGetAuditMode>all</NuGetAuditMode>
     <WarningsAsErrors>$(WarningsAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsAsErrors>

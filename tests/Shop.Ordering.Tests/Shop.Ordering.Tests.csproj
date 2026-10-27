@@ -18,6 +18,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
     <ProjectReference Include="..\..\src\Shop.Ordering.Api\Shop.Ordering.Api.csproj" />
     <ProjectReference Include="..\..\src\Shop.Contracts\Shop.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Shop.BuildingBlocks.Messaging\Shop.BuildingBlocks.Messaging.csproj" />
   </ItemGroup>
 
 </Project>

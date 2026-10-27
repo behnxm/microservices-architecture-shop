@@ -8,7 +8,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Scalar.AspNetCore;
+using Shop.BuildingBlocks.Messaging.Extensions;
+using Shop.Contracts;
 using Shop.Ordering.Api.Clients;
+using Shop.Ordering.Api.Consumers;
 using Shop.Ordering.Api.Data;
 using Shop.Ordering.Api.Orders;
 using Shop.ServiceDefaults;
@@ -57,12 +60,19 @@ builder.Services.AddHttpClient<ICatalogClient, CatalogClient>(client =>
     options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(15);
 });
 
-// 5. OpenAPI & Documentation
+// 5. Messaging infrastructure, outbox, inbox, and consumers
+builder.Services.AddMessagingInfrastructure(builder.Configuration);
+builder.Services.AddTransactionalOutbox<OrderingDbContext>();
+builder.Services.AddTransactionalInbox<OrderingDbContext>();
+builder.Services.AddConsumer<StockReservedIntegrationEvent, StockReservedHandler, OrderingDbContext>("ordering.stock-reserved");
+builder.Services.AddConsumer<StockRejectedIntegrationEvent, StockRejectedHandler, OrderingDbContext>("ordering.stock-rejected");
+
+// 6. OpenAPI & Documentation
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// 6. Automatic migrations on startup
+// 7. Automatic migrations on startup
 if (app.Configuration.GetValue<bool>("Database:Migrate"))
 {
     using var scope = app.Services.CreateScope();
@@ -74,14 +84,14 @@ if (app.Configuration.GetValue<bool>("Database:Migrate"))
     logger.LogInformation("Ordering database migrations applied successfully.");
 }
 
-// 7. OpenAPI & Scalar UI (Development only)
+// 8. OpenAPI & Scalar UI (Development only)
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
 
-// 8. Map Endpoints
+// 9. Map Endpoints
 app.MapOrderEndpoints();
 app.MapDefaultEndpoints();
 
