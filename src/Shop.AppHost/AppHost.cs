@@ -41,6 +41,15 @@ var orderingApi = builder.AddProject<Shop_Ordering_Api>("ordering-api")
     .WithEnvironment("HealthChecks:Expose", "true")
     .WithHttpHealthCheck("/health");
 
+var notificationsWorker = builder.AddProject<Shop_Notifications_Worker>("notifications-worker")
+    .WithReference(notificationsDb)
+    .WithReference(rabbitmq)
+    .WaitFor(notificationsDb)
+    .WaitFor(rabbitmq)
+    .WithEnvironment("Database:Migrate", "true")
+    .WithEnvironment("HealthChecks:Expose", "true")
+    .WithHttpHealthCheck("/health");
+
 // 3. Reverse Proxy Gateway (the single external entry point)
 builder.AddProject<Shop_Gateway>("gateway")
     .WithReference(catalogApi)
