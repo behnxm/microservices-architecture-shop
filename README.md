@@ -4,6 +4,8 @@ A production-grade, interview-ready reference implementation of a distributed mi
 
 This repository demonstrates the core patterns of modern distributed systems without third-party framework magic: Database-per-Service, Transactional Outbox, Transactional Inbox, Idempotent Consumers, Choreographed Saga with Compensation, Resilient HTTP, End-to-End Distributed Tracing (W3C), and a Reverse Proxy Gateway.
 
+> **New to microservices or transitioning from Clean Architecture?** Read the [Beginner's Guide: From Monolith to Microservices](docs/BEGINNERS-GUIDE.md) for an intuitive walkthrough of distributed concepts, the dual entry-point model, and your very first run.
+
 ---
 
 ## 1. Architecture Overview
@@ -186,6 +188,7 @@ dotnet format --verify-no-changes
 
 ## 7. Documentation & Resources
 
+- [Beginner's Guide: From Monolith to Microservices](docs/BEGINNERS-GUIDE.md)
 - [Operational Runbook](docs/RUNBOOK.md)
 - [Technical Interview Notes](docs/INTERVIEW-NOTES.md)
 - [AsyncAPI 3.0 Specification](docs/asyncapi.yaml)
