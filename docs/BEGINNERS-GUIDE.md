@@ -21,8 +21,8 @@ To understand *why* this repository is structured the way it is, let us trace ho
 ### Stage 1: The Single-Project Monolith ("No Architecture")
 ```
 [Client / Browser]
-       │
-       ▼ (HTTP)
+        │
+        ▼ (HTTP)
 ┌──────────────────────────────────────────────┐
 │  Single ASP.NET Core Web API Project         │
 │  - Controllers / Minimal APIs                │
@@ -72,7 +72,7 @@ To understand *why* this repository is structured the way it is, let us trace ho
                                          │
                                          ▼ (Public HTTP on :8080)
                        ┌───────────────────────────────────┐
-                       │  Shop.Gateway (YARP Reverse Proxy) │
+                       │ Shop.Gateway (YARP Reverse Proxy) │
                        └───────────────┬───────────────────┘
                                        │ (Internal Routing)
                      ┌─────────────────┴─────────────────┐
