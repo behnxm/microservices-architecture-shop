@@ -1,0 +1,33 @@
+## Build and artifact outputs
+bin/
+obj/
+out/
+TestResults/
+*.trx
+*.coverage
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## IDE and Editor files
+.vs/
+.idea/
+*.swp
+*.swo
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+## OS files
+.DS_Store
+Thumbs.db
+
+## Environment and secrets
+.env
+*.local.env
+
+## Dotnet / EF artifacts
+.dotnet/

@@ -1,0 +1,21 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14.0</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- CA1848: allow direct ILogger extensions (e.g. LogInformation) without requiring source-generated LoggerMessage delegates -->
+    <NoWarn>$(NoWarn);CA1848</NoWarn>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <WarningsAsErrors>$(WarningsAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsAsErrors>
+  </PropertyGroup>
+
+  <!-- Justified suppressions for test projects: naming conventions (CA1707 allows underscores in test method names), xUnit cancellation rule -->
+  <PropertyGroup Condition="'$(IsTestProject)' == 'true' Or $([System.String]::Copy('$(MSBuildProjectName)').Contains('Tests'))">
+    <NoWarn>$(NoWarn);CA1707;CS1591;xUnit1051</NoWarn>
+  </PropertyGroup>
+</Project>

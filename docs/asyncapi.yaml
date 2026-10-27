@@ -1,0 +1,253 @@
+asyncapi: 3.0.0
+info:
+  title: MicroservicesShop Event-Driven Architecture
+  version: 1.0.0
+  description: >
+    Event-driven asynchronous choreography across Catalog, Ordering, and Notifications services
+    using RabbitMQ topic exchange 'shop.events' and the transactional outbox pattern.
+
+servers:
+  rabbitmq:
+    host: localhost:5672
+    protocol: amqp
+    description: RabbitMQ broker instance
+
+channels:
+  orderingOrderPlacedV1:
+    address: ordering.order-placed.v1
+    messages:
+      OrderPlaced:
+        $ref: '#/components/messages/OrderPlacedIntegrationEvent'
+    description: Published by Ordering when a new order is received and pending validation.
+
+  catalogStockReservedV1:
+    address: catalog.stock-reserved.v1
+    messages:
+      StockReserved:
+        $ref: '#/components/messages/StockReservedIntegrationEvent'
+    description: Published by Catalog when inventory has been successfully reserved for an order.
+
+  catalogStockRejectedV1:
+    address: catalog.stock-rejected.v1
+    messages:
+      StockRejected:
+        $ref: '#/components/messages/StockRejectedIntegrationEvent'
+    description: Published by Catalog when inventory reservation fails (insufficient stock or unknown SKU).
+
+  orderingOrderConfirmedV1:
+    address: ordering.order-confirmed.v1
+    messages:
+      OrderConfirmed:
+        $ref: '#/components/messages/OrderConfirmedIntegrationEvent'
+    description: Published by Ordering when stock reservation succeeded and the order moves to Confirmed.
+
+  orderingOrderRejectedV1:
+    address: ordering.order-rejected.v1
+    messages:
+      OrderRejected:
+        $ref: '#/components/messages/OrderRejectedIntegrationEvent'
+    description: Published by Ordering when stock reservation was rejected and the order moves to Rejected.
+
+operations:
+  # Ordering Service operations
+  publishOrderPlaced:
+    action: send
+    channel:
+      $ref: '#/channels/orderingOrderPlacedV1'
+    description: Ordering produces OrderPlaced upon receiving customer checkout request.
+
+  consumeStockReserved:
+    action: receive
+    channel:
+      $ref: '#/channels/catalogStockReservedV1'
+    description: Ordering consumes StockReserved to transition order to Confirmed.
+
+  consumeStockRejected:
+    action: receive
+    channel:
+      $ref: '#/channels/catalogStockRejectedV1'
+    description: Ordering consumes StockRejected to transition order to Rejected.
+
+  publishOrderConfirmed:
+    action: send
+    channel:
+      $ref: '#/channels/orderingOrderConfirmedV1'
+    description: Ordering produces OrderConfirmed when order reaches final confirmed state.
+
+  publishOrderRejected:
+    action: send
+    channel:
+      $ref: '#/channels/orderingOrderRejectedV1'
+    description: Ordering produces OrderRejected when order reaches final rejected state.
+
+  # Catalog Service operations
+  consumeOrderPlaced:
+    action: receive
+    channel:
+      $ref: '#/channels/orderingOrderPlacedV1'
+    description: Catalog consumes OrderPlaced to reserve stock all-or-nothing in one transaction.
+
+  publishStockReserved:
+    action: send
+    channel:
+      $ref: '#/channels/catalogStockReservedV1'
+    description: Catalog produces StockReserved when all order lines have adequate stock.
+
+  publishStockRejected:
+    action: send
+    channel:
+      $ref: '#/channels/catalogStockRejectedV1'
+    description: Catalog produces StockRejected when any order line lacks sufficient stock.
+
+  # Notifications Service operations
+  consumeOrderConfirmed:
+    action: receive
+    channel:
+      $ref: '#/channels/orderingOrderConfirmedV1'
+    description: Notifications consumes OrderConfirmed to dispatch confirmation email.
+
+  consumeOrderRejected:
+    action: receive
+    channel:
+      $ref: '#/channels/orderingOrderRejectedV1'
+    description: Notifications consumes OrderRejected to dispatch cancellation/rejection email.
+
+components:
+  messages:
+    OrderPlacedIntegrationEvent:
+      name: ordering.order-placed.v1
+      title: Order Placed Event
+      summary: Integration event emitted when an order is created in Pending status.
+      contentType: application/json
+      payload:
+        type: object
+        required: [messageId, occurredOn, orderId, customerId, customerEmail, items]
+        properties:
+          messageId:
+            type: string
+            format: uuid
+          occurredOn:
+            type: string
+            format: date-time
+          orderId:
+            type: string
+            format: uuid
+          customerId:
+            type: string
+            format: uuid
+          customerEmail:
+            type: string
+            format: email
+          items:
+            type: array
+            items:
+              type: object
+              required: [productId, quantity]
+              properties:
+                productId:
+                  type: string
+                  format: uuid
+                quantity:
+                  type: integer
+                  minimum: 1
+
+    StockReservedIntegrationEvent:
+      name: catalog.stock-reserved.v1
+      title: Stock Reserved Event
+      summary: Integration event emitted when stock reservation succeeds for an entire order.
+      contentType: application/json
+      payload:
+        type: object
+        required: [messageId, occurredOn, orderId]
+        properties:
+          messageId:
+            type: string
+            format: uuid
+          occurredOn:
+            type: string
+            format: date-time
+          orderId:
+            type: string
+            format: uuid
+
+    StockRejectedIntegrationEvent:
+      name: catalog.stock-rejected.v1
+      title: Stock Rejected Event
+      summary: Integration event emitted when stock reservation fails.
+      contentType: application/json
+      payload:
+        type: object
+        required: [messageId, occurredOn, orderId, reason, unavailableProductIds]
+        properties:
+          messageId:
+            type: string
+            format: uuid
+          occurredOn:
+            type: string
+            format: date-time
+          orderId:
+            type: string
+            format: uuid
+          reason:
+            type: string
+          unavailableProductIds:
+            type: array
+            items:
+              type: string
+              format: uuid
+
+    OrderConfirmedIntegrationEvent:
+      name: ordering.order-confirmed.v1
+      title: Order Confirmed Event
+      summary: Integration event emitted when an order moves to Confirmed state.
+      contentType: application/json
+      payload:
+        type: object
+        required: [messageId, occurredOn, orderId, customerId, customerEmail, total, currency]
+        properties:
+          messageId:
+            type: string
+            format: uuid
+          occurredOn:
+            type: string
+            format: date-time
+          orderId:
+            type: string
+            format: uuid
+          customerId:
+            type: string
+            format: uuid
+          customerEmail:
+            type: string
+            format: email
+          total:
+            type: number
+          currency:
+            type: string
+
+    OrderRejectedIntegrationEvent:
+      name: ordering.order-rejected.v1
+      title: Order Rejected Event
+      summary: Integration event emitted when an order moves to Rejected state.
+      contentType: application/json
+      payload:
+        type: object
+        required: [messageId, occurredOn, orderId, customerId, customerEmail, reason]
+        properties:
+          messageId:
+            type: string
+            format: uuid
+          occurredOn:
+            type: string
+            format: date-time
+          orderId:
+            type: string
+            format: uuid
+          customerId:
+            type: string
+            format: uuid
+          customerEmail:
+            type: string
+            format: email
+          reason:
+            type: string

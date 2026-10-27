@@ -1,0 +1,9 @@
+{
+  "messageId": "018f6c40-1000-7000-8000-000000000003",
+  "occurredOn": "2026-10-27T12:00:01Z",
+  "orderId": "018f6c40-1000-7000-8000-000000000010",
+  "reason": "Insufficient stock for product 018f6c40-0000-7000-8000-000000000001",
+  "unavailableProductIds": [
+    "018f6c40-0000-7000-8000-000000000001"
+  ]
+}
