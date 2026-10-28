@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,6 +8,7 @@ using Shop.BuildingBlocks.Messaging.Consumers;
 using Shop.BuildingBlocks.Messaging.Inbox;
 using Shop.BuildingBlocks.Messaging.Outbox;
 using Shop.BuildingBlocks.Messaging.RabbitMq;
+using Shop.Contracts;
 
 namespace Shop.BuildingBlocks.Messaging.Extensions;
 
@@ -71,11 +73,16 @@ public static class MessagingServiceCollectionExtensions
         where THandler : class, IIntegrationEventHandler<TEvent>
         where TDbContext : DbContext
     {
+        var resolvedRoutingKey = !string.IsNullOrWhiteSpace(routingKey)
+            ? routingKey
+            : typeof(TEvent).GetCustomAttribute<IntegrationEventAttribute>()?.ContractName
+                ?? typeof(TEvent).Name.ToLowerInvariant();
+
         services.AddScoped<THandler>();
         services.AddHostedService(sp => ActivatorUtilities.CreateInstance<EventConsumer<TEvent, THandler, TDbContext>>(
             sp,
             queueName,
-            routingKey ?? string.Empty));
+            resolvedRoutingKey));
 
         return services;
     }

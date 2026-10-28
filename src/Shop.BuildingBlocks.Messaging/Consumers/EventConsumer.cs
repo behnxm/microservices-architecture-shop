@@ -48,7 +48,9 @@ public sealed class EventConsumer<TEvent, THandler, TDbContext> : BackgroundServ
         _queueName = queueName;
 
         var attr = typeof(TEvent).GetCustomAttribute<IntegrationEventAttribute>();
-        _routingKey = routingKey ?? attr?.ContractName ?? typeof(TEvent).Name.ToLowerInvariant();
+        _routingKey = !string.IsNullOrWhiteSpace(routingKey)
+            ? routingKey
+            : attr?.ContractName ?? typeof(TEvent).Name.ToLowerInvariant();
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

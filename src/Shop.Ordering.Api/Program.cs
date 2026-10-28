@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Scalar.AspNetCore;
+using Shop.BuildingBlocks.Messaging.Data;
 using Shop.BuildingBlocks.Messaging.Extensions;
 using Shop.Contracts;
 using Shop.Ordering.Api.Clients;
@@ -72,7 +73,7 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// 7. Automatic migrations on startup
+// 7. Automatic migrations on startup (using advisory lock to support safe multi-replica startup)
 if (app.Configuration.GetValue<bool>("Database:Migrate"))
 {
     using var scope = app.Services.CreateScope();
@@ -80,7 +81,7 @@ if (app.Configuration.GetValue<bool>("Database:Migrate"))
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
     logger.LogInformation("Applying Ordering database migrations...");
-    await db.Database.MigrateAsync();
+    await DatabaseMigrator.MigrateWithLockAsync(db, logger, lockKey: 7429103L);
     logger.LogInformation("Ordering database migrations applied successfully.");
 }
 

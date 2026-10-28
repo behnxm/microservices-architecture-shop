@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Scalar.AspNetCore;
+using Shop.BuildingBlocks.Messaging.Data;
 using Shop.BuildingBlocks.Messaging.Extensions;
 using Shop.Catalog.Api.Consumers;
 using Shop.Catalog.Api.Data;
@@ -57,7 +58,7 @@ if (app.Configuration.GetValue<bool>("Database:Migrate"))
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
     logger.LogInformation("Applying Catalog database migrations...");
-    await db.Database.MigrateAsync();
+    await DatabaseMigrator.MigrateWithLockAsync(db, logger, lockKey: 7429101L);
     logger.LogInformation("Catalog database migrations applied successfully.");
 
     if (app.Configuration.GetValue<bool>("Database:Seed"))

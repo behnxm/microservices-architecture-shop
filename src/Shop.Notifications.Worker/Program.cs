@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Shop.BuildingBlocks.Messaging.Data;
 using Shop.BuildingBlocks.Messaging.Extensions;
 using Shop.Contracts;
 using Shop.Notifications.Worker.Consumers;
@@ -41,12 +42,22 @@ builder.Services.AddHealthChecks()
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
 
 // Override SMTP host if Aspire service discovery or environment variable is present
-var mailpitEndpoint = builder.Configuration["services:mailpit:smtp:0"] ?? builder.Configuration["MAILPIT_SMTP"];
+var mailpitEndpoint = builder.Configuration["services:mailpit:smtp:0"]
+    ?? builder.Configuration["services:mailpit:default:0"]
+    ?? builder.Configuration["MAILPIT_SMTP"];
+
 if (!string.IsNullOrEmpty(mailpitEndpoint))
 {
     builder.Services.PostConfigure<SmtpOptions>(options =>
     {
-        if (Uri.TryCreate($"smtp://{mailpitEndpoint}", UriKind.Absolute, out var uri))
+        var cleaned = mailpitEndpoint;
+        var schemeIdx = cleaned.IndexOf("://", StringComparison.Ordinal);
+        if (schemeIdx >= 0)
+        {
+            cleaned = cleaned.Substring(schemeIdx + 3);
+        }
+
+        if (Uri.TryCreate($"smtp://{cleaned}", UriKind.Absolute, out var uri))
         {
             options.Host = uri.Host;
             if (uri.Port > 0) options.Port = uri.Port;
@@ -72,7 +83,7 @@ if (app.Configuration.GetValue<bool>("Database:Migrate"))
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
     logger.LogInformation("Applying Notifications database migrations...");
-    await db.Database.MigrateAsync();
+    await DatabaseMigrator.MigrateWithLockAsync(db, logger, lockKey: 7429102L);
     logger.LogInformation("Notifications database migrations applied successfully.");
 }
 

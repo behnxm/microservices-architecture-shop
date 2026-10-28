@@ -74,10 +74,10 @@ public sealed class OutboxProcessor<TDbContext> : BackgroundService where TDbCon
 
             var messageIds = await db.Database.SqlQueryRaw<Guid>(
                 """
-                SELECT id as "Value"
+                SELECT "Id" AS "Value"
                 FROM outbox_messages
-                WHERE processed_on IS NULL
-                ORDER BY occurred_on
+                WHERE "ProcessedOn" IS NULL
+                ORDER BY "OccurredOn"
                 LIMIT {0}
                 FOR UPDATE SKIP LOCKED
                 """, BatchSize).ToListAsync(cancellationToken);
