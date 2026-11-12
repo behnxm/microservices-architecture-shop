@@ -8,7 +8,7 @@
     <!-- Aspire AppHost & Integrations -->
     <!-- Aspire.Hosting.AppHost is implicitly defined by Aspire.AppHost.Sdk -->
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.4" />
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.4" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.5" />
     <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.4" />
 
     <!-- Microsoft Extensions & Resilience & Service Discovery -->
